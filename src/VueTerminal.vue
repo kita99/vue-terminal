@@ -40,7 +40,7 @@
             <span v-if="typeof prompt !== 'undefined'">{{prompt}}</span>
             <span v-else>\{{title}}</span>
           </span>
-          <span>{{inputCommand}}</span>
+          <span v-for="(word, index) in transformedInputCommand" :class="{spacing: index + 1 !== transformedInputCommand.length}" :key="word">{{word}}</span>
           <span :class="lastLineClass" v-html="lastLineContent"></span>
           <input
             v-model="inputCommand"
@@ -68,10 +68,17 @@
         actionResult: '',
         lastLineContent: '...',
         inputCommand: '',
+        transformedInputCommand: [],
         supportingCommandList: '',
         historyIndex: 0,
         commandHistory: []
       };
+    },
+    watch: {
+      inputCommand: function (value) {
+        this.transformedInputCommand = value.split(' ')
+        console.log(this.transformedInputCommand)
+      }
     },
     props: {
       commandList: {
@@ -250,6 +257,10 @@
 </script>
 
 <style scoped lang="scss">
+.spacing {
+  margin-right: 5px
+}
+
 .vue-terminal {
   position: relative;
   width: 100%;

@@ -17,6 +17,7 @@
         </p>
 
         <p v-for="(item, index) in messageList" :key="index">
+          <span v-if="item.level !== 'System' || item.level === undefined" class="prompt">{{ item.level }}</span>
           <span>{{item.time}}</span>
           <span v-if="item.label" :class="item.type">{{item.label}}</span>
           <pre class="cmd" v-if="!item.message.list">{{item.message}}</pre>
@@ -33,10 +34,11 @@
 
         <p v-if="actionResult"> <span class="cmd">{{actionResult}}</span></p>
 
-        <p class="terminal-last-line" ref="terminalLastLine">
+        <p class="terminal-last-line" :class="{active: isFocused}" ref="terminalLastLine">
           <span v-if="lastLineContent==='&nbsp'">
-            <span v-if="typeof prompt !== 'undefined'" class="prompt">{{prompt}}</span>
-            <span class="prompt" v-else>\{{title}}</span>
+            <span class="prompt"></span>
+            <span v-if="typeof prompt !== 'undefined'">{{prompt}}</span>
+            <span v-else>\{{title}}</span>
           </span>
           <span>{{inputCommand}}</span>
           <span :class="lastLineClass" v-html="lastLineContent"></span>
@@ -44,6 +46,8 @@
             v-model="inputCommand"
             :disabled="lastLineContent!=='&nbsp'"
             autofocus="true"
+            @focus="isFocused = true"
+            @blur="isFocused = false"
             type="text"
             @keyup="handleCommand($event)"
             ref="inputBox"
@@ -59,6 +63,7 @@
     name: 'VueTerminal',
     data() {
       return {
+        isFocused: false,
         messageList: [],
         actionResult: '',
         lastLineContent: '...',
@@ -132,14 +137,16 @@
         await this.handleRun(this.defaultTask)
       }
       if (this.showHelpMessage) {
-        this.pushToList({ level: 'System', message: 'Type "help" to get a supporting command list.' })
+        this.pushToList({ level: 'System', message: 'Type "help" to get a list of supported commands.' })
       }
       this.lastLineContent = '&nbsp'
       this.handleFocus()
     },
     methods: {
       handleFocus() {
-        this.$refs.inputBox.focus();
+        setTimeout(() => {
+          this.$refs.inputBox.focus()
+        }, 100)
       },
       handleCommand(e) {
         if (e.keyCode !== 13) {
@@ -192,7 +199,13 @@
         this.lastLineContent = '...'
         return this.taskList[taskName][taskName](this.pushToList, input).then(done => {
           this.pushToList(done)
+
+          if (done.command === 'clear') {
+            this.clearList()
+          }
+
           this.lastLineContent = '&nbsp'
+          this.handleFocus()
         }).catch(error => {
           this.pushToList(error || { type: 'error', label: 'Error', message: 'Something went wrong!' })
           this.lastLineContent = '&nbsp'
@@ -202,18 +215,21 @@
         this.messageList.push(message)
         this.autoScroll()
       },
+      clearList(message) {
+        this.messageList = []
+      },
       printHelp(input) {
         if (!input) {
-          this.pushToList({ message: 'Here is a list of supporting command.' })
+          this.pushToList({ level: 'System', message: 'List of supported commands:' })
           this.supportingCommandList.map(command => {
             if (this.commandList[command]) {
-              this.pushToList({ type: 'success', label: command, message: '---> ' + this.commandList[command].description })
+              this.pushToList({ level: 'System', type: 'success', label: command, message: '---> ' + this.commandList[command].description })
             } else {
-              this.pushToList({ type: 'success', label: command, message: '---> ' + this.taskList[command].description })
+              this.pushToList({ level: 'System', type: 'success', label: command, message: '---> ' + this.taskList[command].description })
             }
             return undefined
           })
-          this.pushToList({ message: 'Enter help <command> to get help for a particular command.' })
+          this.pushToList({ level: 'System', message: 'Enter help <command> to get help for a particular command.' })
         } else {
           const command = this.commandList[input] || this.taskList[input]
           this.pushToList({ message: command.description })
@@ -349,13 +365,22 @@
   margin-right: 10px;
 }
 
+.prompt {
+  color: blue
+}
+
 .vue-terminal .terminal-window .cursor {
   margin: 0;
+  background-color: transparent;
+  margin-left: -5px;
+}
+
+.vue-terminal .terminal-window .active .cursor {
   background-color: white;
   animation: blink 1s step-end infinite;
   -webkit-animation: blink 1s step-end infinite;
-  margin-left: -5px;
 }
+
 
 @keyframes blink {
   50% {

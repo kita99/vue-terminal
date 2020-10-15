@@ -164,6 +164,8 @@
         }, 100)
       },
       handleCommand(e) {
+        var match = true
+
         if (e.keyCode !== 13) {
           this.handlekeyEvent(e)
           return
@@ -176,17 +178,36 @@
         } else {
           this.pushToList({ message: `$ \\${this.title} ${this.inputCommand} ` })
         }
+
         if (!this.inputCommand) return;
         const commandArr = this.inputCommand.split(' ')
+
         if (commandArr[0] === 'help') {
           this.printHelp(commandArr[1])
         } else if (this.commandList[this.inputCommand]) {
           this.commandList[this.inputCommand].messages.map(item => this.pushToList(item))
         } else if (this.taskList[this.inputCommand]) {
           this.handleRun(this.inputCommand, this.inputCommand)
-        } else if (this.taskList[this.inputCommand.split(' ')[0]]) {
-          this.handleRun(this.inputCommand.split(' ')[0], this.inputCommand)
         } else {
+          var command
+          var args
+
+          var local = []
+          commandArr.forEach(value => {
+            local.push(value)
+            if (!this.taskList[local.join(' ')]) return
+
+            command = local.join(' ')
+            args = commandArr.slice(local.length)
+            this.handleRun(command, args)
+          })
+
+          if (!command) {
+            match = false
+          }
+        }
+
+        if (!match) {
           if (this.unknownCommandMessage) {
             this.pushToList(this.unknownCommandMessage)
           } else {
@@ -194,6 +215,7 @@
             this.pushToList({ level: 'System', message: 'type "help" to get a supporting command list.' })
           }
         }
+
         this.inputCommand = ''
         this.autoScroll()
       },

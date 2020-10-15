@@ -77,7 +77,6 @@
     watch: {
       inputCommand: function (value) {
         this.transformedInputCommand = value.split(' ')
-        console.log(this.transformedInputCommand)
       }
     },
     props: {
@@ -150,6 +149,15 @@
       this.handleFocus()
     },
     methods: {
+      convertToCamelCase (string) {
+        var array = string.split(' ')
+        var first = array.shift()
+
+        array = array.map(value => value.charAt(0).toUpperCase() + value.substring(1))
+
+        array.unshift(first)
+        return array.join('')
+      },
       handleFocus() {
         setTimeout(() => {
           this.$refs.inputBox.focus()
@@ -174,6 +182,8 @@
           this.printHelp(commandArr[1])
         } else if (this.commandList[this.inputCommand]) {
           this.commandList[this.inputCommand].messages.map(item => this.pushToList(item))
+        } else if (this.taskList[this.inputCommand]) {
+          this.handleRun(this.inputCommand, this.inputCommand)
         } else if (this.taskList[this.inputCommand.split(' ')[0]]) {
           this.handleRun(this.inputCommand.split(' ')[0], this.inputCommand)
         } else {
@@ -202,9 +212,15 @@
         }
       },
       handleRun(taskName, input) {
-        if (!this.taskList[taskName] || !this.taskList[taskName][taskName]) return Promise.resolve()
+        var callableTaskName = taskName
+
+        if (taskName.indexOf(' ') >= 0) {
+          callableTaskName = this.convertToCamelCase(taskName)
+        }
+
+        if (!this.taskList[taskName] || !this.taskList[taskName][callableTaskName]) return Promise.resolve()
         this.lastLineContent = '...'
-        return this.taskList[taskName][taskName](this.pushToList, input).then(done => {
+        return this.taskList[taskName][callableTaskName](this.pushToList, input).then(done => {
           this.pushToList(done)
 
           if (done.command === 'clear') {
